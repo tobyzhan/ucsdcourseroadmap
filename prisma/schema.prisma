@@ -1,0 +1,149 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// Core course information
+model Course {
+  id          Int      @id @default(autoincrement())
+  dept        String   // e.g., "MATH", "CSE"
+  number      String   // e.g., "180A", "100"
+  title       String
+  unitsMin    Int      @map("units_min")
+  unitsMax    Int      @map("units_max")
+  description String?  @db.Text
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  // Relations
+  prereqsFor       CoursePrereqEdge[] @relation("CoursePrereqs")
+  isPrereqFor      CoursePrereqEdge[] @relation("PrereqCourse")
+  majorRequirements MajorRequirement[]
+  userCourses      UserCourse[]
+  planItems        PlanItem[]
+
+  @@unique([dept, number])
+  @@index([dept])
+  @@map("courses")
+}
+
+// MVP schema: simple edge list (AND-only prerequisites)
+// e.g., MATH 180A requires MATH 20C (AND) MATH 18
+model CoursePrereqEdge {
+  id            Int    @id @default(autoincrement())
+  courseId      Int    @map("course_id")
+  prereqCourseId Int   @map("prereq_course_id")
+
+  course        Course @relation("CoursePrereqs", fields: [courseId], references: [id], onDelete: Cascade)
+  prereqCourse  Course @relation("PrereqCourse", fields: [prereqCourseId], references: [id], onDelete: Cascade)
+
+  @@unique([courseId, prereqCourseId])
+  @@index([courseId])
+  @@index([prereqCourseId])
+  @@map("course_prereq_edges")
+}
+
+// Major/program information
+model Major {
+  id       Int      @id @default(autoincrement())
+  name     String   @unique
+  ucsdCode String?  @map("ucsd_code")
+  requirements MajorRequirement[]
+
+  @@map("majors")
+}
+
+// Requirements for each major
+model MajorRequirement {
+  id         Int     @id @default(autoincrement())
+  majorId    Int     @map("major_id")
+  courseId   Int     @map("course_id")
+  groupName  String? @map("group_name") // e.g., "Lower Division", "Electives"
+  required   Boolean @default(true)
+
+  major      Major   @relation(fields: [majorId], references: [id], onDelete: Cascade)
+  course     Course  @relation(fields: [courseId], references: [id], onDelete: Cascade)
+
+  @@unique([majorId, courseId])
+  @@index([majorId])
+  @@map("major_requirements")
+}
+
+// User authentication and profile
+model User {
+  id        Int      @id @default(autoincrement())
+  email     String   @unique
+  name      String?
+  createdAt DateTime @default(now()) @map("created_at")
+
+  courses   UserCourse[]
+  plans     Plan[]
+
+  @@map("users")
+}
+
+// Track which courses a user has taken or planned
+model UserCourse {
+  id        Int      @id @default(autoincrement())
+  userId    Int      @map("user_id")
+  courseId  Int      @map("course_id")
+  status    CourseStatus
+  term      String?  // e.g., "Fall", "Winter", "Spring"
+  year      Int?
+  createdAt DateTime @default(now()) @map("created_at")
+
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  course    Course   @relation(fields: [courseId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, courseId])
+  @@index([userId])
+  @@map("user_courses")
+}
+
+enum CourseStatus {
+  TAKEN
+  PLANNED
+  IN_PROGRESS
+}
+
+// Saved roadmap plans
+model Plan {
+  id              Int      @id @default(autoincrement())
+  userId          Int      @map("user_id")
+  name            String
+  targetCourseId  Int?     @map("target_course_id")
+  targetTerm      String?  @map("target_term")
+  targetYear      Int?     @map("target_year")
+  createdAt       DateTime @default(now()) @map("created_at")
+  updatedAt       DateTime @updatedAt @map("updated_at")
+
+  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  items           PlanItem[]
+
+  @@index([userId])
+  @@map("plans")
+}
+
+// Individual courses in a plan
+model PlanItem {
+  id        Int    @id @default(autoincrement())
+  planId    Int    @map("plan_id")
+  courseId  Int    @map("course_id")
+  term      String // e.g., "Fall", "Winter", "Spring"
+  year      Int
+  orderIndex Int   @map("order_index") // For sorting within the plan
+
+  plan      Plan   @relation(fields: [planId], references: [id], onDelete: Cascade)
+  course    Course @relation(fields: [courseId], references: [id], onDelete: Cascade)
+
+  @@unique([planId, courseId])
+  @@index([planId])
+  @@map("plan_items")
+}
