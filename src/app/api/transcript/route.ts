@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 
-// Force Node.js runtime — pdf-parse requires Node.js fs/buffer APIs
+// Force Node.js runtime — pdf-parse requires Node.js APIs
 export const runtime = 'nodejs'
 
 /**
@@ -22,16 +22,18 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'File must be a PDF' }, { status: 400 })
     }
 
-    // Convert File to Buffer for pdf-parse
+    // Convert File to Buffer
     const arrayBuffer = await file.arrayBuffer()
     const buffer = Buffer.from(arrayBuffer)
 
-    // Dynamically import pdf-parse/node inside the handler so Turbopack
-    // doesn't try to statically bundle it at build time
-    const pdfParseModule = await import('pdf-parse/node')
-    const pdfParse = pdfParseModule.default ?? (pdfParseModule as any)
-    const pdfData = await pdfParse(buffer)
-    const text: string = pdfData.text
+    // Dynamically import so Turbopack doesn't bundle it at build time.
+    // New pdf-parse API: pass {data: buffer} to constructor, call .getText()
+    const { PDFParse } = await import('pdf-parse')
+    const parser = new PDFParse({ data: buffer, verbosity: 0 })
+    const result = await parser.getText()
+    const text: string = result.text
+
+    await parser.destroy()
 
     // Fetch all courses from DB to match against
     const allCourses = await prisma.course.findMany({
