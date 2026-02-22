@@ -11,6 +11,7 @@ import ReactFlow, {
   MarkerType,
 } from 'reactflow'
 import 'reactflow/dist/style.css'
+import { useTranscript } from '@/context/TranscriptContext'
 
 interface RoadmapData {
   targetCourse: any
@@ -22,6 +23,7 @@ export function PrereqGraph({ courseId }: { courseId: number }) {
   const [nodes, setNodes, onNodesChange] = useNodesState([])
   const [edges, setEdges, onEdgesChange] = useEdgesState([])
   const [loading, setLoading] = useState(true)
+  const { takenCourseIds } = useTranscript()
 
   useEffect(() => {
     async function loadRoadmap() {
@@ -49,12 +51,27 @@ export function PrereqGraph({ courseId }: { courseId: number }) {
         depthGroups.forEach((courses, depth) => {
           courses.forEach((course, index) => {
             const isTarget = course.id === courseId
+            const isTaken = takenCourseIds.includes(course.id)
+
+            let bg = '#ffffff'
+            let color = '#000000'
+            let border = '2px solid #3b82f6'
+
+            if (isTarget) {
+              bg = '#3b82f6'; color = '#ffffff'; border = '2px solid #1d4ed8'
+            } else if (isTaken) {
+              bg = '#dcfce7'; color = '#166534'; border = '2px solid #16a34a'
+            }
+
             flowNodes.push({
               id: String(course.id),
               data: {
                 label: (
                   <div className="text-center">
-                    <div className="font-semibold">{course.dept} {course.number}</div>
+                    <div className="font-semibold">
+                      {isTaken && <span className="mr-1">✓</span>}
+                      {course.dept} {course.number}
+                    </div>
                     <div className="text-xs">{course.title.substring(0, 20)}...</div>
                   </div>
                 ),
@@ -64,9 +81,9 @@ export function PrereqGraph({ courseId }: { courseId: number }) {
                 y: index * 100,
               },
               style: {
-                background: isTarget ? '#3b82f6' : '#ffffff',
-                color: isTarget ? '#ffffff' : '#000000',
-                border: '2px solid #3b82f6',
+                background: bg,
+                color,
+                border,
                 borderRadius: '8px',
                 padding: '10px',
                 width: 200,
@@ -98,7 +115,7 @@ export function PrereqGraph({ courseId }: { courseId: number }) {
     }
 
     loadRoadmap()
-  }, [courseId, setNodes, setEdges])
+  }, [courseId, takenCourseIds, setNodes, setEdges])
 
   if (loading) {
     return (
@@ -117,17 +134,35 @@ export function PrereqGraph({ courseId }: { courseId: number }) {
   }
 
   return (
-    <div className="h-96 border-2 border-gray-200 rounded-lg">
-      <ReactFlow
-        nodes={nodes}
-        edges={edges}
-        onNodesChange={onNodesChange}
-        onEdgesChange={onEdgesChange}
-        fitView
-      >
-        <Background />
-        <Controls />
-      </ReactFlow>
+    <div>
+      {/* Legend */}
+      <div className="flex gap-4 mb-3 text-sm flex-wrap">
+        <div className="flex items-center gap-1.5">
+          <div className="w-4 h-4 rounded bg-blue-500 border-2 border-blue-700" />
+          <span className="text-gray-600">Target course</span>
+        </div>
+        <div className="flex items-center gap-1.5">
+          <div className="w-4 h-4 rounded bg-green-100 border-2 border-green-500 flex items-center justify-center text-green-700 text-xs font-bold">✓</div>
+          <span className="text-gray-600">Completed</span>
+        </div>
+        <div className="flex items-center gap-1.5">
+          <div className="w-4 h-4 rounded bg-white border-2 border-blue-400" />
+          <span className="text-gray-600">Still needed</span>
+        </div>
+      </div>
+
+      <div className="h-96 border-2 border-gray-200 rounded-lg">
+        <ReactFlow
+          nodes={nodes}
+          edges={edges}
+          onNodesChange={onNodesChange}
+          onEdgesChange={onEdgesChange}
+          fitView
+        >
+          <Background />
+          <Controls />
+        </ReactFlow>
+      </div>
     </div>
   )
 }

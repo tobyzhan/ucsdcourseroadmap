@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
+import { useTranscript } from '@/context/TranscriptContext'
 
 interface Course {
   id: number
@@ -21,6 +22,7 @@ export function CourseSearch() {
   const [results, setResults] = useState<Course[]>([])
   const [loading, setLoading] = useState(false)
   const router = useRouter()
+  const { takenCourseIds } = useTranscript()
 
   const handleSearch = async (searchQuery: string) => {
     setQuery(searchQuery)
@@ -65,14 +67,25 @@ export function CourseSearch() {
 
       {results.length > 0 && (
         <div className="absolute z-10 w-full mt-2 bg-white border border-gray-200 rounded-lg shadow-lg max-h-96 overflow-y-auto">
-          {results.map((course) => (
+          {results.map((course) => {
+            const taken = takenCourseIds.includes(course.id)
+            return (
             <button
               key={course.id}
               onClick={() => handleCourseClick(course.id)}
-              className="w-full px-4 py-3 text-left hover:bg-blue-50 border-b border-gray-100 last:border-b-0 transition-colors"
+              className={`w-full px-4 py-3 text-left border-b border-gray-100 last:border-b-0 transition-colors ${
+                taken ? 'hover:bg-green-50 bg-green-50/50' : 'hover:bg-blue-50'
+              }`}
             >
-              <div className="font-semibold text-gray-900">
-                {course.dept} {course.number}
+              <div className="flex items-center gap-2">
+                <span className="font-semibold text-gray-900">
+                  {course.dept} {course.number}
+                </span>
+                {taken && (
+                  <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-green-100 text-green-700 text-xs font-semibold rounded-full">
+                    ✓ Completed
+                  </span>
+                )}
               </div>
               <div className="text-sm text-gray-600">{course.title}</div>
               <div className="text-xs text-gray-500 mt-1">
@@ -84,7 +97,8 @@ export function CourseSearch() {
                 )}
               </div>
             </button>
-          ))}
+            )
+          })}
         </div>
       )}
 

@@ -1,5 +1,6 @@
 import Link from 'next/link'
 import { CourseSearch } from '@/components/CourseSearch'
+import { TranscriptUpload } from '@/components/TranscriptUpload'
 
 export default function Home() {
   return (
@@ -28,6 +29,17 @@ export default function Home() {
                 Build Custom Plan
               </Link>
             </div>
+          </div>
+
+          {/* Transcript Upload */}
+          <div className="bg-white rounded-xl shadow-lg p-8 mb-8">
+            <h2 className="text-2xl font-semibold text-gray-900 mb-2">
+              📄 Upload Your Transcript
+            </h2>
+            <p className="text-gray-600 mb-6">
+              Upload your UCSD unofficial transcript PDF and completed courses will be automatically highlighted with a ✓ across the site
+            </p>
+            <TranscriptUpload />
           </div>
 
           {/* Course Search */}
