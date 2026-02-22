@@ -1,9 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
-import * as pdfParseModule from 'pdf-parse'
-// pdf-parse may export as default or named depending on bundler
-const pdfParse: (buffer: Buffer) => Promise<{ text: string }> =
-  (pdfParseModule as any).default ?? (pdfParseModule as any)
+
+// Force Node.js runtime — pdf-parse requires Node.js fs/buffer APIs
+export const runtime = 'nodejs'
 
 /**
  * POST /api/transcript
@@ -27,22 +26,24 @@ export async function POST(request: NextRequest) {
     const arrayBuffer = await file.arrayBuffer()
     const buffer = Buffer.from(arrayBuffer)
 
-    // Extract raw text from PDF
+    // Dynamically import pdf-parse/node inside the handler so Turbopack
+    // doesn't try to statically bundle it at build time
+    const pdfParseModule = await import('pdf-parse/node')
+    const pdfParse = pdfParseModule.default ?? (pdfParseModule as any)
     const pdfData = await pdfParse(buffer)
-    const text = pdfData.text
+    const text: string = pdfData.text
 
     // Fetch all courses from DB to match against
     const allCourses = await prisma.course.findMany({
       select: { id: true, dept: true, number: true, title: true },
     })
 
-    // Build regex patterns: match "DEPT NUMBER" e.g. "MATH 20A", "CSE 101"
-    // UCSD transcripts typically show them as "MATH  20A" or "MATH 20A"
+    // Match "DEPT NUMBER" patterns e.g. "MATH 20A", "CSE 101"
+    // Allow 1-4 spaces between dept and number (transcripts sometimes double-space)
     const matchedCourseIds: number[] = []
     const matchedCourses: Array<{ id: number; code: string; title: string }> = []
 
     for (const course of allCourses) {
-      // Allow variable whitespace between dept and number (transcripts sometimes double-space)
       const pattern = new RegExp(
         `\\b${escapeRegex(course.dept)}\\s{1,4}${escapeRegex(course.number)}\\b`,
         'i'

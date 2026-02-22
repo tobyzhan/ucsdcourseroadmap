@@ -1,11 +1,12 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  /* config options here */
   typescript: {
-    // Temporarily ignore build errors to get deployment working
     ignoreBuildErrors: true,
   },
+  // Required for pdf-parse (uses Node.js canvas/fs internals)
+  turbopack: {},
+  serverExternalPackages: ['pdf-parse'],
 };
 
 export default nextConfig;
