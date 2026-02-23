@@ -12,15 +12,18 @@ datasource db {
 
 // Core course information
 model Course {
-  id          Int      @id @default(autoincrement())
-  dept        String   // e.g., "MATH", "CSE"
-  number      String   // e.g., "180A", "100"
-  title       String
-  unitsMin    Int      @map("units_min")
-  unitsMax    Int      @map("units_max")
-  description String?  @db.Text
-  createdAt   DateTime @default(now()) @map("created_at")
-  updatedAt   DateTime @updatedAt @map("updated_at")
+  id           Int      @id @default(autoincrement())
+  dept         String   // e.g., "MATH", "CSE"
+  number       String   // e.g., "180A", "100"
+  title        String
+  unitsMin     Int      @map("units_min")
+  unitsMax     Int      @map("units_max")
+  description  String?  @db.Text
+  difficulty   Int      @default(5) // 1–10 scale
+  workload     Int      @default(5) // 1–10 scale
+  typicalTerms String[] @default([]) @map("typical_terms") // e.g. ["FA","WI","SP"]
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
 
   // Relations
   prereqsFor       CoursePrereqEdge[] @relation("CoursePrereqs")
