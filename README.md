@@ -141,8 +141,5 @@ Courses at the same level have no dependency on each other and can be taken in p
 - [ ] Multiple major support
 - [ ] Mobile-optimized UI
 
----
 
-## License
 
-MIT
